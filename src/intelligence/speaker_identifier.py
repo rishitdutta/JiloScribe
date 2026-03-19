@@ -70,7 +70,7 @@ def classify_speakers(segments: list[WhisperXSegment]) -> SpeakerRoles:
 
 def speaker_identifier(
     segments: list[WhisperXSegment],
-) -> list[WhisperXSegmentIdentifiedSpeaker]:
+) -> tuple[list[WhisperXSegmentIdentifiedSpeaker], SpeakerRoles]:
     # Try classification
     roles = classify_speakers(segments[:20])  # first 20
     if roles.roles is None:
@@ -94,4 +94,4 @@ def speaker_identifier(
             speaker=mapping[segment.speaker] if segment.speaker is not None else None,
         )
         for segment in segments
-    ]
+    ], roles

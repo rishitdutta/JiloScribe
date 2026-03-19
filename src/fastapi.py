@@ -19,7 +19,7 @@ else:
     from typing import Any
     from .job import JobRegistry
     from .db import DataBase
-    from .intelligence.extract_entities import EntityExtractionResult
+    from .routes.pipeline_model import JobResult
     from .config import Settings
     @dataclass()
     class State:
@@ -32,7 +32,7 @@ else:
         ]
         get_whisperx_diarize_model: Callable[[], whisperx_diarize.DiarizationPipeline]
         db: DataBase
-        whisperx_job_registry: JobRegistry[..., EntityExtractionResult]
+        whisperx_job_registry: JobRegistry[..., JobResult]
         settings: Settings
 
     class FastAPI(_FastAPI):

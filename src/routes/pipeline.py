@@ -8,18 +8,22 @@ from pydantic import BaseModel, UUID4
 from ..job import Job, JobStatus
 from ..intelligence.whisperx_transcribe import whisperx_transcribe
 from ..intelligence.speaker_identifier import speaker_identifier
-from ..intelligence.extract_entities import extract_entities, EntityExtractionResult
+from ..intelligence.extract_entities import extract_entities
+from .pipeline_model import JobResult
 from datetime import datetime
 from functools import partial
-
 
 router = APIRouter()
 
 
-def pipeline_job(audio_file_path: str, req: Request) -> EntityExtractionResult:
+def pipeline_job(audio_file_path: str, req: Request) -> JobResult:
     segments = whisperx_transcribe(audio_file_path, req)
-    segments = speaker_identifier(segments)
-    return extract_entities(segments)
+    segments_with_speaker, roles = speaker_identifier(segments)
+    return JobResult(
+        entities=extract_entities(segments_with_speaker).entities,
+        speaker_roles=roles,
+        segments=segments
+    )
 
 
 class PipelineJobCreated(BaseModel):
@@ -28,7 +32,7 @@ class PipelineJobCreated(BaseModel):
     created_at: datetime
 
 
-def job_save_callback(job: Job[..., EntityExtractionResult], req: Request) -> None:
+def job_save_callback(job: Job[..., JobResult], req: Request) -> None:
     req.app.state.db.transcribe_job_saver(
         PipelineJobResponse(
             job_id=UUID(job.id),
@@ -59,7 +63,7 @@ async def create_pipeline(
 class PipelineJobResponse(BaseModel):
     job_id: UUID4
     status: JobStatus
-    result: None | EntityExtractionResult = None
+    result: None | JobResult = None
     error: None | str = None
 
 
@@ -89,6 +93,4 @@ async def get_pipeline_job(
         result=job.result if job.status == JobStatus.DONE else None,
         error=str(job.error) if job.status == JobStatus.FAILED else None,
     )
-    # if job.status in (JobStatus.DONE, JobStatus.FAILED, JobStatus.CANCELLED):
-    #     req.app.state.db.transcribe_job_saver(result, str(job_id))
     return result

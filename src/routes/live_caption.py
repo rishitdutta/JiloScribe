@@ -3,7 +3,7 @@ from fastapi.routing import APIRouter
 from ..fastapi import WebSocket
 from starlette.websockets import WebSocketDisconnect
 import numpy as np
-from faster_whisper import WhisperModel as WhisperModel # pyright: ignore[reportMissingTypeStubs]
+from faster_whisper import WhisperModel as WhisperModel  # pyright: ignore[reportMissingTypeStubs]
 
 router = APIRouter()
 
@@ -59,7 +59,10 @@ async def caption_handler(
             ).flatten()  # downcast to f32
 
             segments, _ = await asyncio.to_thread(
-                model.transcribe, audio_data, beam_size=5, vad_filter=True # type: ignore
+                model.transcribe, # type: ignore
+                audio_data,
+                beam_size=5,
+                vad_filter=True,
             )
             segments = list(segments)
             if len(segments) == 0:

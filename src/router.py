@@ -38,22 +38,27 @@ global_state = GlobalState()
 def get_faster_whisper_model():
     global global_state
     if global_state.faster_whisper_model is None:
-        global_state.faster_whisper_model = WhisperModel(
-            "tiny.en",
+        global_state.faster_whisper_model = whisperx_asr.WhisperModel(  # WhisperModel(
+            "small.en",
             device="cuda",
             compute_type="float16",
+            download_root="./models/whisper",
+            local_files_only=global_state.get_settings().local_model_only,
         )
     return global_state.faster_whisper_model
 
 
-def get_whisperx_asr_model():
+def get_whisperx_asr_model(
+    whisper_arch: str = "medium.en", model: whisperx_asr.WhisperModel | None = None
+):
     global global_state
     if global_state.whisperx_asr_model is None:
         global_state.whisperx_asr_model = whisperx_asr.load_model(  # pyright: ignore[reportUnknownMemberType]
-            "medium.en",
+            whisper_arch=whisper_arch,
+            model=model,
             device="cuda",
             compute_type="float16",
-            download_root="./models/whisper-medium",
+            download_root="./models/whisper",
             local_files_only=global_state.get_settings().local_model_only,
         )
     return global_state.whisperx_asr_model
@@ -86,8 +91,8 @@ async def lifespan(app: FastAPI):
     global global_state
     if True:  # pre init
         get_faster_whisper_model()
-        get_whisperx_alignment_model()
         get_whisperx_asr_model()
+        get_whisperx_alignment_model()
         get_whisperx_diarize_model()
     whisperx_job_registry_worker = None
     try:

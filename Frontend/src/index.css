@@ -1,0 +1,54 @@
+@import url("https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Sora:wght@500;600;700&display=swap");
+@import "tailwindcss";
+
+:root {
+  --ink-strong: #132238;
+  --ink-soft: #49607a;
+  --surface: #f4f8fc;
+  --accent: #0b7fd7;
+  --accent-strong: #065a9a;
+  --panel: #ffffff;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  min-height: 100%;
+}
+
+body {
+  font-family: "Manrope", "Segoe UI", sans-serif;
+  background:
+    radial-gradient(circle at 18% 12%, #d8f0ff 0%, transparent 36%),
+    radial-gradient(circle at 86% 24%, #ffe8ce 0%, transparent 34%),
+    linear-gradient(145deg, #eef5fc 0%, #f7fafc 48%, #edf4fb 100%);
+  color: var(--ink-strong);
+}
+
+h1,
+h2,
+h3 {
+  font-family: "Sora", "Manrope", sans-serif;
+}
+
+@keyframes overlayGradientShift {
+  0% {
+    background-position: 0% 30%;
+  }
+  50% {
+    background-position: 100% 70%;
+  }
+  100% {
+    background-position: 0% 30%;
+  }
+}
+
+.overlay-gradient-motion {
+  background-size: 220% 220%;
+  animation: overlayGradientShift 10s ease-in-out infinite;
+}

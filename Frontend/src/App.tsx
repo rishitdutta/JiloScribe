@@ -39,6 +39,9 @@ type AppStage = "idle" | "recording" | "processing" | "results";
 type OverlayStage = "recording" | "processing" | null;
 type OverlayTransition = "clip" | "fade";
 
+const BACKEND_HOST: string = "127.0.0.1";
+const BACKEND_PORT: number = 8000;
+
 export default function AmbientScribe() {
   const [appStage, setAppStage] = useState<AppStage>("idle");
   const [overlayStage, setOverlayStage] = useState<OverlayStage>(null);
@@ -49,6 +52,14 @@ export default function AmbientScribe() {
   const [fhirData, setFhirData] = useState<FhirData | null>(null);
 
   const timerRefs = useRef<number[]>([]);
+
+  // 🔥 NEW refs
+  const wsRef = useRef(null);
+  const audioContextRef = useRef(null);
+  const processorRef = useRef(null);
+
+  const finalTextRef = useRef("");
+  const partialTextRef = useRef("");
 
   const clearAllTimers = () => {
     timerRefs.current.forEach((timerId) => window.clearTimeout(timerId));
@@ -70,40 +81,84 @@ export default function AmbientScribe() {
   useEffect(() => {
     return () => {
       clearAllTimers();
+      wsRef.current?.close();
+      audioContextRef.current?.close();
     };
   }, []);
 
-  const startRecording = () => {
+  // 🚀 START RECORDING (REAL STREAM)
+  const startRecording = async () => {
     clearAllTimers();
+
     setTranscript("");
     setFhirData(null);
+    finalTextRef.current = "";
+    partialTextRef.current = "";
+
     setAppStage("recording");
     showOverlay("recording");
 
-    const chunks = [
-      { text: "Patient complain kar raha hai... ", delay: 900 },
-      { text: "severe headache since 2 days. ", delay: 2200 },
-      { text: "Blood pressure check kiya, it is 150/95. ", delay: 3500 },
-      {
-        text: "Prescribing Paracetamol 500mg SOS and Telmisartan 40mg daily.",
-        delay: 5000,
-      },
-    ];
+    // 🔌 WebSocket
+    const ws = new WebSocket(`ws://${BACKEND_HOST}:${BACKEND_PORT}/ws/live_caption`);
+    ws.binaryType = "arraybuffer";
+    wsRef.current = ws;
 
-    chunks.forEach((chunk) => {
-      trackTimeout(() => {
-        setTranscript((prev) => prev + chunk.text);
-      }, chunk.delay);
-    });
+    ws.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+
+      if (data.type === "final") {
+        finalTextRef.current += data.text + " ";
+        partialTextRef.current = "";
+      }
+
+      if (data.type === "partial") {
+        partialTextRef.current = data.text;
+      }
+
+      setTranscript(finalTextRef.current + partialTextRef.current);
+    };
+
+    ws.onopen = () => console.log("WS connected");
+    ws.onclose = () => console.log("WS closed");
+
+    // 🎤 MIC
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+
+    const audioContext = new AudioContext({ sampleRate: 16000 });
+    audioContextRef.current = audioContext;
+
+    const source = audioContext.createMediaStreamSource(stream);
+
+    const processor = audioContext.createScriptProcessor(4096, 1, 1);
+    processorRef.current = processor;
+
+    source.connect(processor);
+    processor.connect(audioContext.destination);
+
+    processor.onaudioprocess = (e) => {
+      const input = e.inputBuffer.getChannelData(0);
+      const buffer = new Float32Array(input);
+
+      if (ws.readyState === 1) {
+        ws.send(buffer);
+      }
+    };
   };
 
+  // 🛑 STOP RECORDING
   const stopRecording = () => {
     clearAllTimers();
+
+    processorRef.current?.disconnect();
+    audioContextRef.current?.close();
+    wsRef.current?.close();
+
     setAppStage("processing");
     setOverlayTransition("fade");
     setOverlayStage("processing");
     setOverlayVisible(true);
 
+    // mock FHIR (keep your pipeline later)
     trackTimeout(() => {
       setFhirData({
         patientId: "PT-98765",
@@ -138,10 +193,8 @@ export default function AmbientScribe() {
 
       setAppStage("results");
       setOverlayVisible(false);
-      trackTimeout(() => {
-        setOverlayStage(null);
-      }, 520);
-    }, 1800);
+      trackTimeout(() => setOverlayStage(null), 500);
+    }, 1500);
   };
 
   const renderResults = () => {

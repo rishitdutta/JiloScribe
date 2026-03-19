@@ -1,0 +1,26 @@
+[project]
+name = "jiloscribe"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+
+dependencies = [
+    "fastapi>=0.135.1",
+    "faster-whisper>=1.2.1",
+    "langchain>=1.2.12",
+    "langchain-openai>=1.1.11",
+    "numpy>=2.4.3",
+    "pydantic>=2.12.5",
+    "pydantic-settings>=2.13.1",
+    "python-dotenv>=1.2.2",
+    "python-multipart>=0.0.22",
+    "scipy>=1.17.1",
+    "tqdm>=4.67.3",
+    "whisperx>=3.8.2",
+]
+
+[dependency-groups]
+dev = [
+    "uvicorn[standard]>=0.42.0",
+]
